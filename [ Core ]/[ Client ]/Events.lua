@@ -34,8 +34,8 @@ RegisterNetEvent('DokusCore:Boats:CheckCloseNPC', function()
     for k,v in pairs(_Boats.NPCs) do
       local Dist = GetDistance(v.Coords)
       if ((Loc ~= nill) and (Low(v.ID) == Low(Loc))) then
-        if ((Dist <= v.Radius[4]) and not (CloseNPC)) then InShopRange() end
-        if ((Dist > v.Radius[4]) and (CloseNPC)) then OutShopRange() end
+        if ((Dist <= v.Radius[4]) and not (CloseNPC) and (Ready)) then InShopRange() end
+        if ((Dist > v.Radius[4]) and (CloseNPC) and (Ready)) then OutShopRange() end
       end
     end
   end
@@ -64,57 +64,120 @@ end)
 --------------------------------------------------------------------------------
 --------------------------------------------------------------------------------
 RegisterNetEvent('DokusCore:Boats:Buy', function(Boat)
-  local Data = Decoded(Boat.Meta)
-  local CanBuy, Price = Data.CanBuy, Data.BuyPrice
-  if (Low(CanBuy) == 'false') then NoteNPCTalk(Dialog.NPCName, "I'am sorry, I'am currently not able to sell this boat", 5000) return end
+  -- Anti glitch.
+  PauseScript = true
+  MenuPaused = true
+
+  -- Variables
+  local Meta = Decoded(Boat.Meta)
+  local CanBuy, Price = Meta.CanBuy, Meta.BuyPrice
+  if (Low(CanBuy) == 'false') then NoteNPCTalk(Dialog.NPCName, "I'am sorry, I'am currently not able to sell this boat", true, 5000) PauseScript, MenuPaused = false, false return end
   local Char = TSC('DokusCore:Core:DBGet:Characters', { 'User', 'Single', { SteamID, CharID } }).Result[1]
   local Money = TN(Char.Money)
 
   -- Check if user has enough money
-  if (Money < Price) then NoteNPCTalk(Dialog.NPCName, "You do not have enough money to buy this boat!", 5000) return end
+  if (Money < Price) then NoteNPCTalk(Dialog.NPCName, "You do not have enough money to buy this boat!", true, 5000) PauseScript, MenuPaused = false, false  return end
+
+  -- Check if the user already has this boat.
 
   -- Continue if the user has enoug money
   for i,p in pairs(_Boats.NPCs) do
     for k,v in pairs(p) do
       if (Low(Loc) == Low(p.ID)) then
+        -- Let the user create a name for the boat.
+        TextEntry('Boat Name', 'Client', 'DokusCore:Boats:SetBoatName', nil)
         TriggerServerEvent('DokusCore:Core:DBSet:Characters', { 'Money', { SteamID, CharID, TN(Money - Price) }})
-        TriggerServerEvent('DokusCore:Core:DBIns:Boats', { 'User', 'Single', { SteamID, CharID, Boat.Item, Boat.Name, Loc, Loc, Encoded(p.SpawnPos.Coords) }})
-        NoteNPCTalk(Dialog.NPCName, "You've bought yourself a boat, that is awesome!", 5000)
-        NoteNPCTalk(Dialog.NPCName, "Here are the peddles. I wish you sooo much fun!", 5000)
+        TriggerServerEvent('DokusCore:Core:DBIns:Boats', { 'User', 'Single', { SteamID, CharID, Boat.Item, UserBoatName, Loc, Loc, Encoded(p.SpawnPos.Coords) }})
+        NoteNPCTalk(Dialog.NPCName, "You've bought yourself a boat, that is awesome!", true, 5000)
+        NoteNPCTalk(Dialog.NPCName, "Here are the peddles. I wish you sooo much fun!", true, 5000)
+        PauseScript = false
+        MenuPaused = false
         return -- Stop the loop as it loops more then once
       end
     end
   end
 
+  -- Reset Ani glitch
+  PauseScript = false
+  MenuPaused = false
 end)
 --------------------------------------------------------------------------------
 --------------------------------------------------------------------------------
 RegisterNetEvent('DokusCore:Boats:Sell', function(Boat)
-  local Data = Decoded(Boat.Meta)
-  local CanSell, Price = Data.CanSell, Data.SellPrice
-  local Boats = TSC('DokusCore:Core:DBGet:Boats', { 'User', 'All', { SteamID } })
-  local Result, BoatID = Boats.Result, Boats.BID
+  -- Anti glitch.
+  PauseScript = true
+  MenuPaused  = true
 
-  -- Stop user is this boat can not be sold.
-  if (Low(CanSell) == 'false') then NoteNPCTalk(Dialog.NPCName, "I'am sorry, I'am currently not able to buy this boat", 5000) return end
+  -- Variables
+  local Name, BID, Hanger, ID, Price = Boat.Name, Boat.BID, Boat.Hanger, Boat.ID, nil
 
-  -- Check if the user has this boat.
-  for k, v in pairs(Result) do
-    if (Low(v.BID) == (Low(BoatID))) then
-      
+  -- Set the price for the selling boat
+  for k,v in pairs(BoatArr) do
+    local Dec = Decoded(v.Meta)
+    if (Low(v.Item) == Low(BID)) then
+      Price = TN(Dec.SellPrice)
     end
   end
 
-  
-  if not GetUserBoats() then NoteNPCTalk(Dialog.NPCName, "I'am sorry, I can't buy a boat that's not in your name", 5000) print("B") return end
-  print("Sell")
+  for k,v in pairs(UserBoats) do
+    if (Low(Loc) == (Low(Hanger))) then
+      if (TN(v.ID) == TN(ID)) then
+        table.remove(UserBoats, k)
+        local Char = TSC('DokusCore:Core:DBGet:Characters', { 'User', 'Single', { SteamID, CharID } }).Result[1]
+        local Money = TN(Char.Money)
+        TriggerServerEvent('DokusCore:Core:DBSet:Characters', { 'Money', { SteamID, CharID, TN(Money + Price) }})
+        TriggerServerEvent('DokusCore:Core:DBDel:Boats', { 'User', 'Single', 'Name', { v.Name } })
+        NoteNPCTalk(Dialog.NPCName, "You've sold your boat, that is awesome!", true, 5000)
+        NoteNPCTalk(Dialog.NPCName, "Here is your money, I hope you had fun!", true, 5000)
+        PauseScript = false
+        MenuPaused  = false
+      end
+    else
+      NoteNPCTalk(Dialog.NPCName, "You've not stored this boat in this hangar!", true, 5000)
+      PauseScript = false
+      MenuPaused  = false
+    end
+  end
+
+  PauseScript = false
+  MenuPaused  = false
 end)
 --------------------------------------------------------------------------------
 --------------------------------------------------------------------------------
-
+RegisterNetEvent('DokusCore:Boats:SetBoatName', function(Name) UserBoatName = Name.Result end)
 --------------------------------------------------------------------------------
 --------------------------------------------------------------------------------
+RegisterNetEvent('DokusCore:Boats:SpawnBoat' )
+AddEventHandler('DokusCore:Boats:SpawnBoat', function(BID, Coords, Hanger)
+  local PedID = PedID()
+  local Sync = TCTCC('DokusCore:Sync:Get:UserData')
+  local Index = { Sync.SteamID, Sync.CharID, BID, Hanger }
+  local Data = TSC('DokusCore:Core:DBGet:Boats', { 'User', 'Single', 'BID', 'Hanger', Index })
+  local MyBoat = Data.Result[1]
+  local dec = Decoded(Coords)
+  while not HasModelLoaded(BID) do Wait(500) end
 
+  for k,v in pairs(_Boats.NPCs) do
+    if (Low(v.ID) == (Low(Hanger))) then
+      print("logging", dec.x)
+      spawn_boat = CreateVehicle(BID, dec.x,dec.y,dec.z, v.SpawnPos.Heading, true, false)
+      SetVehicleOnGroundProperly(spawn_boat)
+      SetModelAsNoLongerNeeded(BID)
+      UIFadeOut(500) Wait(500)
+      SetFreeze(spawn_boat, true)
+      Wait(500) UIFadeIn(500) ExitMenu()
+
+      local PedInVeh = false
+      while (not (PedInVeh)) do Wait(100)
+        local InVeh = IsPedInVehicle(PedID, spawn_boat, true)
+        if (InVeh) then
+          PedInVeh = true
+          SetFreeze(spawn_boat, false)
+        end
+      end
+    end
+  end
+end)
 --------------------------------------------------------------------------------
 --------------------------------------------------------------------------------
 
@@ -124,7 +187,12 @@ AddEventHandler('onResourceStop', function(Name)
   if (GetCurrentResourceName() ~= Name) then return end
   for k,v in pairs(NPCs) do DeleteEntity(v) end
   for k,v in pairs(Blips) do RemoveBlip(v) end
+  DeleteEntity(MyBoatActive)
   Prompt_Menu, Group = nil, GetRandomIntInRange(0, 0xffffff)
 end)
 --------------------------------------------------------------------------------
 --------------------------------------------------------------------------------
+RegisterCommand("dv",function()
+  local veh = GetVehiclePedIsUsing(PlayerPedId())
+  DeleteEntity(veh)
+end)

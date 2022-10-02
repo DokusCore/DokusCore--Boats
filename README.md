@@ -12,14 +12,14 @@ Make sure that DokusCore is started before this plugin!
 ---
 # Installation
 Simply extract the `DokusCore--Boats` into your `resources` folder, <br>
-and start it via `ensure DokusCore--Boats`. Then go to the Config.lua <br>
+and start it via `ensure DokusCore--Boats`. Then go to the Modules.lua <br>
 file of `DokusCore` itself and at `_Modules = { Boats }` set it to `true`.
 If left to `false` the core will create its own character on ID 1 and not the
 multi characters plugin
 
 ---
 # Plugin Information
-INFO NEEDS TO BE ADDED!
+THIS PLUGIN IS IN DEVELOPMENT!
 
 ---
 # Features

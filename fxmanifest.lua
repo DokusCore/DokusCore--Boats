@@ -25,6 +25,7 @@ shared_script {
   '@DokusCore/[ Core ]/[ System ]/[ Client ]/DokusMenu.lua',
   '@DokusCore/[ Core ]/[ System ]/[ Shared ]/CBSystem.lua',
   -- '@DokusCore/[ Configs ]/[ Modules ]/Boats.lua',
+  '@DokusCore/[ Configs ]/[ Core ]/Modules.lua',
   '@DokusCore/[ Configs ]/[ Dialogs ]/Boats.lua',
 }
 --------------------------------------------------------------------------------
